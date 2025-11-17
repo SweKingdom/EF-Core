@@ -27,7 +27,7 @@ using (var db = new ShopContext())
 while (true)
 {
     Console.WriteLine("\nCommands: List | add | delete <id> | edit <id> | exit");
-    Console.Write("> ");
+    Console.WriteLine(">");
     var line = Console.ReadLine()?.Trim() ?? string.Empty;
     // Hoppa över tomma rader
     if (string.IsNullOrEmpty(line))
