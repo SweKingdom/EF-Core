@@ -57,9 +57,22 @@ while (true)
             break;
         case "edit":
             // Redigera en category
+            // Kräver Id efter kommandot "edit"
+            if (parts.Length < 2 || !int.TryParse(parts[1], out var id))
+            {
+                Console.WriteLine("Usage: Edit <id>");
+                break;
+            }
+            await EditAsync(id);
             break;
         case "delete":
             // Radera en category
+            if (parts.Length < 2 || !int.TryParse(parts[1], out var idD))
+            {
+                Console.WriteLine("Usage: Delete <id>");
+                break;
+            }
+            await DeleteAsync(idD);
             break;
         default:
             Console.WriteLine($"Unknown command.");
@@ -67,6 +80,70 @@ while (true)
             
     }
 }
+
+static async Task DeleteAsync(int id)
+{
+    using var db = new ShopContext();
+    
+    var category = await db.Categories.FirstOrDefaultAsync(c => c.CategoryId == id);
+    if (category == null)
+    {
+        Console.WriteLine("Category not found.");
+        return;
+    }
+    db.Categories.Remove(category);
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Category deleted");
+    }
+    catch (DbUpdateException exception)
+    {
+        Console.WriteLine(exception.Message);
+    }
+}
+
+static async Task EditAsync(int id)
+{
+    using var db = new ShopContext();
+    
+    // Hämta raden vi vill uppdatera
+    var category = await db.Categories.FirstOrDefaultAsync(x => x.CategoryId == id);
+    if (category == null)
+    {
+        Console.WriteLine("Category not found.");
+        return;
+    }
+    
+    // Visar nuvarande värden; Uppdatera namn för en specifik category
+    Console.WriteLine($"{category.CategoryName} ");
+    var name = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (!string.IsNullOrEmpty(name))
+    {
+        category.CategoryName = name;
+    }
+    
+    // Uppdaterar description för en specifik category; TODO: FIX ME (NULL, not required)
+    Console.WriteLine($"{category.CategoryDescription} ");
+    var description = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (!string.IsNullOrEmpty(description))
+    {
+        category.CategoryDescription = description;
+    }
+
+    // Uppdaterar 
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Category edited");
+    }
+    catch (DbUpdateException exception)
+    {
+        Console.WriteLine(exception.Message);
+    }
+}
+
+
 // READ: Lista alla kategorier
 static async Task ListAsync()
 {
