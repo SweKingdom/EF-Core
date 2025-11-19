@@ -21,64 +21,159 @@ using (var db = new ShopContext())
         await db.SaveChangesAsync();
         Console.WriteLine("Seeded db!");
     }
+    if (!await db.Products.AnyAsync())
+    {
+        db.Products.AddRange(
+            new Product {Name = "Mamma Mia",  Description = "Film", Pris = 60, CategoryId = 2}
+        );
+        await db.SaveChangesAsync();
+        Console.WriteLine("Seeded db!");
+    }
 }
 
 // CLI för CRUD; CREATE, READ, UPDATE DELETE
 while (true)
 {
-    Console.WriteLine("\nCommands: List | add | delete <id> | edit <id> | exit");
+    Console.WriteLine("Meny");
+    Console.WriteLine("1 = Categories");
+    Console.WriteLine("2 = Products");
+    Console.WriteLine("exit = avsluta");
     Console.WriteLine(">");
-    var line = Console.ReadLine()?.Trim() ?? string.Empty;
-    // Hoppa över tomma rader
-    if (string.IsNullOrEmpty(line))
-    {
-        continue;
-    }
 
-    if (line.Equals("exit", StringComparison.OrdinalIgnoreCase))
-    {
-        break; // Avsluta programmet, hoppa ur loopen
-    }
     
-    // Delar upp raden på mellanslag: tex "edit 2" --> ["edit", "2"]
-    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-    var cmd = parts[0].ToLowerInvariant();
+    var choice = Console.ReadLine()?.Trim();
+
+    if (choice == "exit")
+        break;
+
+    if (choice == "1")
+        await CategoryMenu();
+    else if (choice == "2")
+        await ProductMenu();
+    else
+        Console.WriteLine("Ogiltigt val.");
+
     
-    // Enkel switch för kommandotolkning
-    switch (cmd)
+    static async Task CategoryMenu()
     {
-        case "list":
-            // Lista våra categories
-            await ListAsync();
-            break;
-        case "add":
-            // Lägg till en category
-            await AddAsync();
-            break;
-        case "edit":
-            // Redigera en category
-            // Kräver Id efter kommandot "edit"
-            if (parts.Length < 2 || !int.TryParse(parts[1], out var id))
+        while(true)
+        {
+            Console.WriteLine("\nCommands: List | add | delete <id> | edit <id> | exit");
+            Console.WriteLine(">");
+            var line = Console.ReadLine()?.Trim() ?? string.Empty;
+            // Hoppa över tomma rader
+            if (string.IsNullOrEmpty(line))
             {
-                Console.WriteLine("Usage: Edit <id>");
-                break;
+                continue;
             }
-            await EditAsync(id);
-            break;
-        case "delete":
-            // Radera en category
-            if (parts.Length < 2 || !int.TryParse(parts[1], out var idD))
+
+            if (line.Equals("exit", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("Usage: Delete <id>");
-                break;
+                break; // Avsluta programmet, hoppa ur loopen
             }
-            await DeleteAsync(idD);
-            break;
-        default:
-            Console.WriteLine($"Unknown command.");
-            break;
+    
+            // Delar upp raden på mellanslag: tex "edit 2" --> ["edit", "2"]
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var cmd = parts[0].ToLowerInvariant();
+    
+            // Enkel switch för kommandotolkning
+            switch (cmd)
+            {
+                case "list":
+                    // Lista våra categories
+                    await ListAsync();
+                    break;
+                case "add":
+                    // Lägg till en category
+                    await AddAsync();
+                    break;
+                case "edit":
+                    // Redigera en category
+                    // Kräver Id efter kommandot "edit"
+                    if (parts.Length < 2 || !int.TryParse(parts[1], out var id))
+                    {
+                        Console.WriteLine("Usage: Edit <id>");
+                        break;
+                    }
+                    await EditAsync(id);
+                    break;
+                case "delete":
+                    // Radera en category
+                    if (parts.Length < 2 || !int.TryParse(parts[1], out var idD))
+                    {
+                        Console.WriteLine("Usage: Delete <id>");
+                        break;
+                    }
+                    await DeleteAsync(idD);
+                    break;
+                default:
+                    Console.WriteLine($"Unknown command.");
+                    break;
             
+            }
+        }
     }
+    
+    static async Task ProductMenu()
+    {
+        while(true)
+        {
+            Console.WriteLine("\nCommands: List | add | delete <id> | edit <id> | exit");
+            Console.WriteLine(">");
+            var line = Console.ReadLine()?.Trim() ?? string.Empty;
+            // Hoppa över tomma rader
+            if (string.IsNullOrEmpty(line))
+            {
+                continue;
+            }
+
+            if (line.Equals("exit", StringComparison.OrdinalIgnoreCase))
+            {
+                break; // Avsluta programmet, hoppa ur loopen
+            }
+    
+            // Delar upp raden på mellanslag: tex "edit 2" --> ["edit", "2"]
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var cmd = parts[0].ToLowerInvariant();
+    
+            // Enkel switch för kommandotolkning
+            switch (cmd)
+            {
+                case "list":
+                    // Lista våra categories
+                    await ListProductsAsync();
+                    break;
+                case "add":
+                    // Lägg till en category
+                    await AddProductAsync();
+                    break;
+                case "edit":
+                    // Redigera en category
+                    // Kräver Id efter kommandot "edit"
+                    if (parts.Length < 2 || !int.TryParse(parts[1], out var EditId))
+                    {
+                        Console.WriteLine("Usage: Edit <id>");
+                        break;
+                    }
+                    await EditProductAsync(EditId);
+                    break;
+                case "delete":
+                    // Radera en category
+                    if (parts.Length < 2 || !int.TryParse(parts[1], out var DelitId))
+                    {
+                        Console.WriteLine("Usage: Delete <id>");
+                        break;
+                    }
+                    await DeleteProductAsync(DelitId);
+                    break;
+                default:
+                    Console.WriteLine($"Unknown command.");
+                    break;
+            
+            }
+        }
+    }
+    
 }
 
 static async Task DeleteAsync(int id)
@@ -185,5 +280,136 @@ static async Task AddAsync()
     {
         // Hit kommer vi tex om UNIQUE - Indexet op CategoryName bryts
         Console.WriteLine("Db Error (Maby duplicate?)! "+ exception.GetBaseException().Message);
+    }
+}
+
+
+static async Task ListProductsAsync()
+{
+    using var db  = new ShopContext();
+    
+    var rows = await db.Products
+        .AsNoTracking()
+        .OrderBy(p => p.Name)
+        .ToListAsync();
+    
+    Console.WriteLine("Id | Name | Description | Pris");
+    foreach (var row in rows)
+    {
+        Console.WriteLine($"{row.ProductId} | {row.Name} | {row.Description} | {row.Pris}");    
+    }
+}
+
+static async Task AddProductAsync()
+{
+    Console.WriteLine("Name:");
+    var name = Console.ReadLine()?.Trim() ?? string.Empty;
+
+    if (string.IsNullOrEmpty(name))
+    {
+        Console.WriteLine("Name is required.");
+        return;
+    }
+
+    Console.WriteLine("Description:");
+    var desc = Console.ReadLine()?.Trim() ?? string.Empty;
+
+    Console.WriteLine("Pris:");
+    if (!decimal.TryParse(Console.ReadLine(), out var pris))
+    {
+        Console.WriteLine("Pris must be a number.");
+        return;
+    }
+    Console.WriteLine("Available categories:");
+    await ListAsync();
+    Console.WriteLine("Choose CategoryId:");
+    var CIDInput = Console.ReadLine()?.Trim() ?? string.Empty;
+    
+    if (!int.TryParse(CIDInput, out var categoryId))
+    {
+        Console.WriteLine("Category must be a number.");
+        return;
+    }
+
+
+    using var db = new ShopContext();
+    await db.Products.AddAsync(new Product
+    {
+        Name = name,
+        Description = desc,
+        Pris = pris,
+        CategoryId  = categoryId
+    });
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Product added.");
+    }
+    catch (DbUpdateException ex)
+    {
+        Console.WriteLine("Db Error! " + ex.GetBaseException().Message);
+    }
+}
+
+static async Task EditProductAsync(int id)
+{
+    using var db = new ShopContext();
+
+    var product = await db.Products.FirstOrDefaultAsync(p => p.ProductId == id);
+    if (product == null)
+    {
+        Console.WriteLine("Product not found.");
+        return;
+    }
+
+    Console.WriteLine($"Name ({product.Name}):");
+    var name = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (!string.IsNullOrEmpty(name))
+        product.Name = name;
+
+    Console.WriteLine($"Description ({product.Description}):");
+    var desc = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (!string.IsNullOrEmpty(desc))
+        product.Description = desc;
+
+    Console.WriteLine($"Pris ({product.Pris}):");
+    var prisInput = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (!string.IsNullOrEmpty(prisInput) && decimal.TryParse(prisInput, out var pris))
+        product.Pris = pris;
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Product updated.");
+    }
+    catch (DbUpdateException ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+}
+
+
+static async Task DeleteProductAsync(int id)
+{
+    using var db = new ShopContext();
+
+    var product = await db.Products.FirstOrDefaultAsync(p => p.ProductId == id);
+    if (product == null)
+    {
+        Console.WriteLine("Product not found.");
+        return;
+    }
+
+    db.Products.Remove(product);
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Product deleted.");
+    }
+    catch (DbUpdateException ex)
+    {
+        Console.WriteLine(ex.Message);
     }
 }

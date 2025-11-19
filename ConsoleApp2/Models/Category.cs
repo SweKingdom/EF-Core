@@ -16,5 +16,8 @@ public class Category
     // Optional (Nullable '?') text med max 250
     [MaxLength(250)]
     public string? CategoryDescription { get; set; }
-    
+ 
+    // Navigation
+    public List<Product> Products { get; set; } = new();
+
 }
