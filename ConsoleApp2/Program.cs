@@ -139,6 +139,15 @@ while (true)
             // Enkel switch för kommandotolkning
             switch (cmd)
             {
+                case "cl":
+                    await ListAsync();
+                    if (parts.Length < 2 || !int.TryParse(parts[1], out var idCategory))
+                    {
+                        Console.WriteLine("Usage: Products By Category <id>");
+                        break;
+                    }
+                    await ProductsByCategoryAsync(idCategory);
+                    break;
                 case "list":
                     // Lista våra categories
                     await ListProductsAsync();
@@ -283,20 +292,35 @@ static async Task AddAsync()
     }
 }
 
+static async Task ProductsByCategoryAsync(int categoryId)
+{
+    using var db = new ShopContext();
+    var products = await db.Products.Where(p => p.CategoryId == categoryId)
+        .Include(p => p.Category)
+        .OrderBy(p => (int)p.Pris).ToListAsync();
+    
+    Console.WriteLine("Id | Name | Description | Price | Category Name");
+    foreach (var p in products)
+    {
+        Console.WriteLine($"{p.ProductId} {p.Name} {p.Description} {p.Pris} {p.Category?.CategoryName}");
+    }
+    
+}
 
 static async Task ListProductsAsync()
 {
     using var db  = new ShopContext();
     
     var rows = await db.Products
+        .Include(product => product.Category)
         .AsNoTracking()
         .OrderBy(p => p.Name)
         .ToListAsync();
     
-    Console.WriteLine("Id | Name | Description | Pris");
+    Console.WriteLine("Id | Name | Description | Pris | Category Name");
     foreach (var row in rows)
     {
-        Console.WriteLine($"{row.ProductId} | {row.Name} | {row.Description} | {row.Pris}");    
+        Console.WriteLine($"{row.ProductId} | {row.Name} | {row.Description} | {row.Pris} | {row.Category?.CategoryName}");    
     }
 }
 
@@ -305,14 +329,14 @@ static async Task AddProductAsync()
     Console.WriteLine("Name:");
     var name = Console.ReadLine()?.Trim() ?? string.Empty;
 
-    if (string.IsNullOrEmpty(name))
+    if (string.IsNullOrEmpty(name) || name.Length > 100)
     {
         Console.WriteLine("Name is required.");
         return;
     }
 
     Console.WriteLine("Description:");
-    var desc = Console.ReadLine()?.Trim() ?? string.Empty;
+    var desc = Console.ReadLine() ?? string.Empty;
 
     Console.WriteLine("Pris:");
     if (!decimal.TryParse(Console.ReadLine(), out var pris))

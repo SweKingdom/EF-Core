@@ -17,7 +17,7 @@ public class Category
     [MaxLength(250)]
     public string? CategoryDescription { get; set; }
  
-    // Navigation
+    // En lista av produkterna
     public List<Product> Products { get; set; } = new();
 
 }
