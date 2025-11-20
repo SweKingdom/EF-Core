@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ConsoleApp2.Models;
 
@@ -13,9 +14,9 @@ public class Product
     public string? Description {get; set;}
     
     // Foreign Key
-    public int CategoryId { get; set; }
+    public int? CategoryId { get; set; }
 
     // Navigation
-    public Category Category { get; set; } = null!;
+    public Category? Category { get; set; }
 
 }
