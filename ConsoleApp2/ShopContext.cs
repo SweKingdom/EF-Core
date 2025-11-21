@@ -11,6 +11,11 @@ public class ShopContext : DbContext
     // Db<Product> mappar till 
     public DbSet<Product> Products => Set<Product>();
     
+    //
+    public DbSet<Author> Authors => Set<Author>();
+    //
+    public DbSet<Book> Books => Set<Book>();
+    
     // Här berättar vi för EF Core att vi vill använda SQLite och var filen ska ligga
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -56,5 +61,38 @@ public class ShopContext : DbContext
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+        //Author (int AuthorId, string Name, string country) 
+        modelBuilder.Entity<Author>(e =>
+        {
+            // Primärnyckel
+            e.HasKey(author => author.AuthorId);
+
+            e.Property(author => author.AuthorName)
+                .IsRequired().HasMaxLength(100);
+
+            e.Property(author => author.AuthorCountry)
+                .HasMaxLength(100);
+
+            e.HasIndex(author => author.AuthorName).IsUnique();
+        });
+
+        // Book (int BookId, string Title, int Year)
+        modelBuilder.Entity<Book>(e =>
+        {
+            // Primärnyckel
+            e.HasKey(book => book.BookId);
+
+            e.Property(book => book.BookTitle)
+                .IsRequired().HasMaxLength(100);
+
+            e.Property(book => book.ReleaseYear)
+                .HasMaxLength(4);
+            e.HasOne(e => e.Author)
+                .WithMany(b => b.Books)
+                .HasForeignKey(e => e.AuthorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+        });
+        
     }
 }

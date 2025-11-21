@@ -1,4 +1,4 @@
-﻿using ConsoleApp2;
+﻿using System.Diagnostics.Metrics;using ConsoleApp2;
 using ConsoleApp2.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +29,28 @@ using (var db = new ShopContext())
         await db.SaveChangesAsync();
         Console.WriteLine("Seeded db!");
     }
+    // Seed Books
+    if (!await db.Books.AnyAsync())
+    {
+        db.Books.AddRange(
+            new Book {BookTitle = "Good Omens", ReleaseYear = 1970},
+            new Book {BookTitle = "Star Wars, Return of the Jedi", ReleaseYear = 1977}
+        );
+        await db.SaveChangesAsync();
+        Console.WriteLine("Seeded db!");
+    }
+    
+    // Seed Author
+    if (!await db.Authors.AnyAsync())
+    {
+        db.Authors.AddRange(
+            new Author {AuthorName = "Neil Gaiman", AuthorCountry = "England"},
+            new Author {AuthorName = "Terry Pratchet", AuthorCountry = "England"},
+            new Author {AuthorName = "George Lucas", AuthorCountry = "USA"}
+        );
+        await db.SaveChangesAsync();
+        Console.WriteLine("Seeded db!");
+    }
 }
 
 // CLI för CRUD; CREATE, READ, UPDATE DELETE
@@ -37,6 +59,7 @@ while (true)
     Console.WriteLine("Meny");
     Console.WriteLine("1 = Categories");
     Console.WriteLine("2 = Products");
+    Console.WriteLine("3 = Lib");
     Console.WriteLine("exit = avsluta");
     Console.WriteLine(">");
 
@@ -50,10 +73,55 @@ while (true)
         await CategoryMenu();
     else if (choice == "2")
         await ProductMenu();
+    else if (choice == "3")
+        await LibMenu();
     else
         Console.WriteLine("Ogiltigt val.");
 
-    
+    static async Task LibMenu()
+    {
+        while (true)
+        {
+            Console.WriteLine("\nCommands: Auths | Books | Auth+ <id> | Book+ <id> | exit");
+            Console.WriteLine(">");
+            var line = Console.ReadLine()?.Trim() ?? string.Empty;
+            // Hoppa över tomma rader
+            if (string.IsNullOrEmpty(line))
+            {
+                continue;
+            }
+
+            if (line.Equals("exit", StringComparison.OrdinalIgnoreCase))
+            {
+                break; // Avsluta programmet, hoppa ur loopen
+            }
+
+            // Delar upp raden på mellanslag: tex "edit 2" --> ["edit", "2"]
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var cmd = parts[0].ToLowerInvariant();
+
+            // Enkel switch för kommando
+            switch (cmd)
+            {
+                case "auths":
+                    await Auths();
+                    break;
+                case "books":
+                    await Books();
+                    break;
+                case "auth+":
+                    await AddAuths();
+                    break;
+                case "book+":
+                    await AddBooks();
+                    break;
+
+            }
+
+
+        }
+    }
+
     static async Task CategoryMenu()
     {
         while(true)
@@ -182,8 +250,118 @@ while (true)
             }
         }
     }
-    
 }
+
+static async Task AddBooks()
+{
+    Console.WriteLine("Available Authors:");
+    await Auths();
+    Console.WriteLine("Choose AuthorId:");
+    var AIDInput = Console.ReadLine() ?? string.Empty;
+    
+    if (!int.TryParse(AIDInput, out var authorId))
+    {
+        Console.WriteLine("AuthorId must be a number.");
+        return;
+    }
+    Console.WriteLine("Title:");
+    var title = Console.ReadLine()?.Trim() ?? string.Empty;
+
+    if (string.IsNullOrEmpty(title) || title.Length > 100)
+    {
+        Console.WriteLine("Title is required.");
+        return;
+    }
+    
+    Console.WriteLine("Year of realease:");
+    if (!int.TryParse(Console.ReadLine(), out var year))
+    {
+        Console.WriteLine("Year must be a number.");
+        return;
+    }
+    
+    using var db = new ShopContext();
+    await db.Books.AddAsync(new Book
+    {
+        BookTitle = title,
+        ReleaseYear = year,
+        AuthorId  = authorId
+    });
+    
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Book added.");
+    }
+    catch (DbUpdateException ex)
+    {
+        Console.WriteLine("Db Error! " + ex.GetBaseException().Message);
+    }
+}
+
+
+
+
+
+static async Task AddAuths()
+{
+    Console.WriteLine("Name");
+    var name = Console.ReadLine()?.Trim() ?? string.Empty;
+
+    if (string.IsNullOrEmpty(name) || name.Length > 100)
+    {
+        Console.WriteLine("Name is required.");
+        return;
+    }
+    
+    Console.WriteLine("Country:");
+    var country = Console.ReadLine()?.Trim() ?? string.Empty;
+    
+    using var db = new ShopContext();
+    await db.Authors.AddAsync(new Author
+    {
+        AuthorName = name,
+        AuthorCountry = country
+    });
+    
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Author added.");
+    }
+    catch (DbUpdateException ex)
+    {
+        Console.WriteLine("Db Error! " + ex.GetBaseException().Message);
+    }
+}
+
+
+
+static async Task Books()
+{
+    var db = new ShopContext();
+    var rows = await db.Books.Include(book => book.Author).AsNoTracking().OrderBy(x => x.BookTitle).ToListAsync();
+    Console.WriteLine("Id | Name | Release date | Author");
+    foreach (var row in rows)
+    {
+        Console.WriteLine($"{row.BookId} | {row.BookTitle} | {row.ReleaseYear} | {row.Author?.AuthorName}");
+    }
+}
+
+
+static async Task Auths()
+{
+    
+    var db = new ShopContext();
+    var rows = await db.Authors.AsNoTracking().OrderBy(x => x.AuthorName).ToListAsync();
+    Console.WriteLine("Id | Name | Country ");
+    foreach (var row in rows)
+    {
+        Console.WriteLine($"{row.AuthorId} | {row.AuthorName} | {row.AuthorCountry}");
+    }
+}
+
+
 
 static async Task DeleteAsync(int id)
 {
