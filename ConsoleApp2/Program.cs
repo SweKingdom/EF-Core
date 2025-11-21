@@ -33,7 +33,6 @@ using (var db = new ShopContext())
     if (!await db.Books.AnyAsync())
     {
         db.Books.AddRange(
-            new Book {BookTitle = "Good Omens", ReleaseYear = 1970},
             new Book {BookTitle = "Star Wars, Return of the Jedi", ReleaseYear = 1977}
         );
         await db.SaveChangesAsync();
@@ -82,7 +81,7 @@ while (true)
     {
         while (true)
         {
-            Console.WriteLine("\nCommands: Auths | Books | Auth+ <id> | Book+ <id> | exit");
+            Console.WriteLine("\nCommands: Auths | Books | Auth+ <id> | Book+ <id> | booksbyauthor | exit");
             Console.WriteLine(">");
             var line = Console.ReadLine()?.Trim() ?? string.Empty;
             // Hoppa över tomma rader
@@ -115,6 +114,16 @@ while (true)
                 case "book+":
                     await AddBooks();
                     break;
+                case "booksbyauthor":
+                    await Auths();
+                    if (parts.Length < 2 || !int.TryParse(parts[1], out var authId))
+                    {
+                        Console.WriteLine("Usage: Books By Author <id>");
+                        break;
+                    }
+                    await BooksByAuthor(authId);
+                    break;
+                    
 
             }
 
@@ -252,18 +261,52 @@ while (true)
     }
 }
 
+static async Task BooksByAuthor(int authId)
+{
+    using var db = new ShopContext();
+    var books = await db.Books
+        .Include(b => b.Authors)
+        .Where(b => b.Authors.Any(a => a.AuthorId == authId))
+        .ToListAsync();
+
+    
+    Console.WriteLine("Id | Name | Release date | Authors");
+    foreach (var row in books)
+    {
+        Console.WriteLine($"{row.BookId} | {row.BookTitle} | {row.ReleaseYear} | {string.Join(", ", row.Authors.Select(a => a.AuthorName))}");
+    }
+}
+
 static async Task AddBooks()
 {
+    using var db = new ShopContext();
     Console.WriteLine("Available Authors:");
     await Auths();
-    Console.WriteLine("Choose AuthorId:");
-    var AIDInput = Console.ReadLine() ?? string.Empty;
+    Console.WriteLine("Enter AuthorIds seperated by comma:");
+    var AIDInput = Console.ReadLine()?.Trim() ?? string.Empty;
+
+    var authorIds = AIDInput.Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(id => int.TryParse(id, out var n) ? n : -1)
+        .Where(n => n > 0)
+        .ToList();
     
-    if (!int.TryParse(AIDInput, out var authorId))
+    if (!authorIds.Any())
     {
-        Console.WriteLine("AuthorId must be a number.");
+        Console.WriteLine("No valid Author ID entered");
         return;
     }
+    
+    // Load authors from DB
+    var authors = await db.Authors
+        .Where(a => authorIds.Contains(a.AuthorId))
+        .ToListAsync();
+
+    if (!authors.Any())
+    {
+        Console.WriteLine("No authors found for the IDs given.");
+        return;
+    }
+    
     Console.WriteLine("Title:");
     var title = Console.ReadLine()?.Trim() ?? string.Empty;
 
@@ -280,12 +323,12 @@ static async Task AddBooks()
         return;
     }
     
-    using var db = new ShopContext();
+    
     await db.Books.AddAsync(new Book
     {
         BookTitle = title,
         ReleaseYear = year,
-        AuthorId  = authorId
+        Authors  = authors
     });
     
     try
@@ -340,11 +383,11 @@ static async Task AddAuths()
 static async Task Books()
 {
     var db = new ShopContext();
-    var rows = await db.Books.Include(book => book.Author).AsNoTracking().OrderBy(x => x.BookTitle).ToListAsync();
+    var rows = await db.Books.Include(book => book.Authors).AsNoTracking().OrderBy(x => x.BookTitle).ToListAsync();
     Console.WriteLine("Id | Name | Release date | Author");
     foreach (var row in rows)
     {
-        Console.WriteLine($"{row.BookId} | {row.BookTitle} | {row.ReleaseYear} | {row.Author?.AuthorName}");
+        Console.WriteLine($"{row.BookId} | {row.BookTitle} | {row.ReleaseYear} | {string.Join(", ", row.Authors.Select(a => a.AuthorName))}");
     }
 }
 

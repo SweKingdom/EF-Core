@@ -87,10 +87,9 @@ public class ShopContext : DbContext
 
             e.Property(book => book.ReleaseYear)
                 .HasMaxLength(4);
-            e.HasOne(e => e.Author)
+            e.HasMany(a => a.Authors)
                 .WithMany(b => b.Books)
-                .HasForeignKey(e => e.AuthorId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .UsingEntity(j => j.ToTable("BookAuthors"));
 
         });
         

@@ -10,7 +10,6 @@ public class Book
     public string BookTitle { get; set; } = null!;
     [MaxLength(4)]
     public int? ReleaseYear { get; set; }
-    
-    public int? AuthorId { get; set; }
-    public Author? Author { get; set; }
+
+    public List<Author> Authors { get; set; } = new();
 }
