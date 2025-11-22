@@ -81,7 +81,7 @@ while (true)
     {
         while (true)
         {
-            Console.WriteLine("\nCommands: Auths | Books | Auth+ <id> | Book+ <id> | booksbyauthor | exit");
+            Console.WriteLine("\nCommands: Auths | Books | Auth+ <id> | Book+ <id> | booksbyauthor | edit <Book id> | search | exit");
             Console.WriteLine(">");
             var line = Console.ReadLine()?.Trim() ?? string.Empty;
             // Hoppa över tomma rader
@@ -122,6 +122,20 @@ while (true)
                         break;
                     }
                     await BooksByAuthor(authId);
+                    break;
+                case "edit":
+                    if (parts.Length < 2 || !int.TryParse(parts[1], out var bookId))
+                    {
+                        Console.WriteLine("Usage: edit <Book id>");
+                        break;
+                    }
+                    await EditBook(bookId);
+                    break;
+                case "search":
+                    await SearchBookAsync();
+                    break;
+                default:
+                    Console.WriteLine($"Unknown command.");
                     break;
                     
 
@@ -260,6 +274,124 @@ while (true)
         }
     }
 }
+
+static async Task SearchBookAsync()
+{
+    // Fråga efter en del av titeln
+    Console.WriteLine("Searching for title");
+    var title = Console.ReadLine()?.Trim() ?? string.Empty;
+
+    if (string.IsNullOrEmpty(title) || title.Length > 150)
+    {
+        Console.WriteLine("Invalid title!");
+        return;
+    }
+    // Lista matchande böcker
+    
+    // Bestäm Context
+    using var db = new ShopContext();
+    //Skapa listan från contexten
+    var books = await db.Books.Include(b => b.Authors)
+        .Where(b => b.BookTitle.ToLower().Contains(title.ToLower())).OrderBy(b => b.BookId).ToListAsync();
+    if (!books.Any())
+    {
+        Console.WriteLine("No books found.");
+    }
+
+    foreach (var book in books)
+    {
+        Console.WriteLine($"{book.BookTitle} | {string.Join(", ", book.Authors.Select(a => a.AuthorName))} | {string.Join(", ", book.Authors.Select(a => a.AuthorCountry))}");
+    }
+    
+}
+
+
+static async Task EditBook(int BookId)
+{
+    using var db = new ShopContext();
+
+    //Hämta raden vi vill uppdatera
+    var book = await db.Books.FirstOrDefaultAsync(x => x.BookId == BookId);
+    if (book == null)
+    {
+        Console.WriteLine("Book not found.");
+        return;
+    }
+
+    // Visar nuvarande värden; Uppdatera title för en specifik bok
+    Console.WriteLine($"Current book title: ");
+    Console.WriteLine($"{book.BookTitle} ");
+    var title = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (!string.IsNullOrEmpty(title))
+    {
+        book.BookTitle = title;
+    }
+
+    // Visar nuvarande värden; Uppdatera realease year för en specifik bok
+    Console.WriteLine($"Current realease year: ");
+    Console.WriteLine($"{book.ReleaseYear} ");
+    var yearInput = Console.ReadLine()?.Trim() ?? string.Empty;
+    if (int.TryParse(yearInput, out int year))
+    {
+        book.ReleaseYear = year;
+    }
+
+    // Visar Nuvarande auths och uppdaterar
+    Console.WriteLine("Current Authors:");
+    Console.WriteLine(string.Join(", ", book.Authors.Select(a => a.AuthorName)));
+
+
+    Console.WriteLine("Available Authors:");
+    await Auths();
+
+    Console.WriteLine("Eneter new AuthorIDs:");
+    var input = Console.ReadLine()?.Trim() ?? string.Empty;
+
+    var authorIds = input.Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(id => int.TryParse(id, out var n) ? n : -1)
+        .Where(n => n > 0)
+        .ToList();
+
+    if (!authorIds.Any())
+    {
+        Console.WriteLine("No valid author IDs entered. Skipping author update.");
+    }
+    else
+    {
+        var authors = await db.Authors
+            .Where(a => authorIds.Contains(a.AuthorId))
+            .ToListAsync();
+
+        if (!authors.Any())
+        {
+            Console.WriteLine("No authors found matching those IDs. Skipping author update.");
+        }
+        else
+        {
+            // Replace the authors
+            book.Authors.Clear();
+            foreach (var a in authors)
+                book.Authors.Add(a);
+        }
+    }
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Book updated successfully.");
+    }
+    catch (DbUpdateException ex)
+    {
+        Console.WriteLine("Error updating book: " + ex.GetBaseException().Message);
+    }
+}
+
+
+
+
+
+
+
 
 static async Task BooksByAuthor(int authId)
 {
